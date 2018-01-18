@@ -2,7 +2,6 @@ package com.paresh.diff.renderer.config;
 
 import com.paresh.diff.renderer.ExcelRendererConstants;
 import com.paresh.diff.renderer.RenderingPreferences;
-import com.paresh.diff.renderer.util.DefaultExcelStyles;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -16,10 +16,12 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.jxls</groupId>
-            <artifactId>jxls-poi</artifactId>
-            <version>1.0.14</version>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>3.17</version>
         </dependency>
+
+
         <dependency>
             <groupId>com.paresh</groupId>
             <artifactId>object-diff</artifactId>

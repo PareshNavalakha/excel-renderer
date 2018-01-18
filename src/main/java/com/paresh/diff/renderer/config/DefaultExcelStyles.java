@@ -1,4 +1,4 @@
-package com.paresh.diff.renderer.util;
+package com.paresh.diff.renderer.config;
 
 import com.paresh.diff.renderer.ExcelRendererConstants;
 import com.paresh.diff.renderer.config.ExcelStyles;

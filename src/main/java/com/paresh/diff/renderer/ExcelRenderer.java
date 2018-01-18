@@ -31,13 +31,7 @@ public class ExcelRenderer implements Renderer {
     }
 
     private String generateFileName(Object before, Object after, DiffResponse diffResponse) {
-        Class clazz = null;
-        if (before != null) {
-            clazz = ReflectionUtil.getCollectionElementClass(before);
-        }
-        if (clazz == null && after != null) {
-            clazz = ReflectionUtil.getCollectionElementClass(after);
-        }
+        Class clazz = ReflectionUtil.getCollectionElementClass(before, after);
         return diffResponse.getClassMetaDataMap().get(clazz).getClassDescription() + ExcelRendererConstants.EXTENSION;
     }
 
