@@ -4,6 +4,16 @@ import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Workbook;
 
 public interface ExcelStyles {
-    public void createStyles(Workbook workbook);
-    public CellStyle getStyle(String styleName);
+
+    CellStyle getTitleStyle(Workbook workbook);
+
+    CellStyle getHeaderStyle(Workbook workbook);
+
+    CellStyle getUnchangedStyle(Workbook workbook);
+
+    CellStyle getNewStyle(Workbook workbook);
+
+    CellStyle getDeletedStyle(Workbook workbook);
+
+    CellStyle getModifiedStyle(Workbook workbook);
 }

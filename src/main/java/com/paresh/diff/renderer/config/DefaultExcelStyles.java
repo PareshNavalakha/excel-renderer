@@ -3,19 +3,16 @@ package com.paresh.diff.renderer.config;
 import com.paresh.diff.renderer.ExcelRendererConstants;
 import com.paresh.diff.renderer.config.ExcelStyles;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFColor;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class DefaultExcelStyles implements ExcelStyles {
 
-    private Map<String, CellStyle> styles = new HashMap<>();
-
-    public CellStyle getStyle(String styleName) {
-        return styles.get(styleName);
-    }
-
-    public void createStyles(Workbook workbook) {
+    @Override
+    public CellStyle getTitleStyle(Workbook workbook)
+    {
         CellStyle style;
         Font titleFont = workbook.createFont();
         titleFont.setFontHeightInPoints((short) 18);
@@ -24,20 +21,30 @@ public class DefaultExcelStyles implements ExcelStyles {
         style.setAlignment(HorizontalAlignment.CENTER);
         style.setVerticalAlignment(VerticalAlignment.CENTER);
         style.setFont(titleFont);
-        styles.put(ExcelRendererConstants.TITLE_STYLE, style);
+        return style;
+    }
 
-        Font monthFont = workbook.createFont();
-        monthFont.setFontHeightInPoints((short) 11);
-        monthFont.setColor(IndexedColors.WHITE.getIndex());
+    @Override
+    public CellStyle getHeaderStyle(Workbook workbook)
+    {
+        CellStyle style;
+        Font font = workbook.createFont();
+        font.setFontHeightInPoints((short) 11);
+        font.setColor(IndexedColors.WHITE.getIndex());
         style = workbook.createCellStyle();
         style.setAlignment(HorizontalAlignment.CENTER);
         style.setVerticalAlignment(VerticalAlignment.CENTER);
         style.setFillForegroundColor(IndexedColors.GREY_50_PERCENT.getIndex());
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        style.setFont(monthFont);
+        style.setFont(font);
         style.setWrapText(true);
-        styles.put(ExcelRendererConstants.HEADER_STYLE, style);
+        return style;
+    }
 
+    @Override
+    public CellStyle getUnchangedStyle(Workbook workbook)
+    {
+        CellStyle style;
         style = workbook.createCellStyle();
         style.setAlignment(HorizontalAlignment.CENTER);
         style.setWrapText(true);
@@ -49,8 +56,13 @@ public class DefaultExcelStyles implements ExcelStyles {
         style.setTopBorderColor(IndexedColors.BLACK.getIndex());
         style.setBorderBottom(BorderStyle.THIN);
         style.setBottomBorderColor(IndexedColors.BLACK.getIndex());
-        styles.put(ExcelRendererConstants.NORMAL_CELL_STYLE, style);
+        return style;
+    }
 
+    @Override
+    public CellStyle getNewStyle(Workbook workbook)
+    {
+        CellStyle style;
         style = workbook.createCellStyle();
         style.setAlignment(HorizontalAlignment.CENTER);
         style.setWrapText(true);
@@ -62,8 +74,15 @@ public class DefaultExcelStyles implements ExcelStyles {
         style.setTopBorderColor(IndexedColors.BLACK.getIndex());
         style.setBorderBottom(BorderStyle.THIN);
         style.setBottomBorderColor(IndexedColors.BLACK.getIndex());
-        styles.put(ExcelRendererConstants.NEW_CELL_STYLE, style);
+        style.setFillForegroundColor(IndexedColors.LIGHT_GREEN.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        return style;
+    }
 
+    @Override
+    public CellStyle getDeletedStyle(Workbook workbook)
+    {
+        CellStyle style;
         style = workbook.createCellStyle();
         style.setAlignment(HorizontalAlignment.CENTER);
         style.setWrapText(true);
@@ -75,8 +94,15 @@ public class DefaultExcelStyles implements ExcelStyles {
         style.setTopBorderColor(IndexedColors.BLACK.getIndex());
         style.setBorderBottom(BorderStyle.THIN);
         style.setBottomBorderColor(IndexedColors.BLACK.getIndex());
-        styles.put(ExcelRendererConstants.DELETE_CELL_STYLE, style);
+        style.setFillForegroundColor(IndexedColors.LIGHT_ORANGE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        return style;
+    }
 
+    @Override
+    public CellStyle getModifiedStyle(Workbook workbook)
+    {
+        CellStyle style;
         style = workbook.createCellStyle();
         style.setAlignment(HorizontalAlignment.CENTER);
         style.setWrapText(true);
@@ -88,7 +114,8 @@ public class DefaultExcelStyles implements ExcelStyles {
         style.setTopBorderColor(IndexedColors.BLACK.getIndex());
         style.setBorderBottom(BorderStyle.THIN);
         style.setBottomBorderColor(IndexedColors.BLACK.getIndex());
-        styles.put(ExcelRendererConstants.MODIFY_CELL_STYLE, style);
-
+        style.setFillForegroundColor(IndexedColors.LIGHT_YELLOW.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        return style;
     }
 }

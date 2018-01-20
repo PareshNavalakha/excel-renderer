@@ -27,6 +27,11 @@ public class ExcelRendererTest {
         beforeEntry2.setAge(30);
         ((List) before).add(beforeEntry2);
 
+        TestDataProvider.Person beforeEntry3 = new TestDataProvider.Person();
+        beforeEntry3.setName("Molly");
+        beforeEntry3.setAge(30);
+        ((List) before).add(beforeEntry3);
+
 
         after = new ArrayList<TestDataProvider.Person>();
         TestDataProvider.Person afterEntry = new TestDataProvider.Person();
@@ -40,6 +45,11 @@ public class ExcelRendererTest {
         afterEntry2.setName("Mike");
         afterEntry2.setAge(35);
         ((List) after).add(afterEntry2);
+
+        TestDataProvider.Person afterEntry3 = new TestDataProvider.Person();
+        afterEntry3.setName("Simon");
+        afterEntry3.setAge(35);
+        ((List) after).add(afterEntry3);
 
         sameAsBefore = new ArrayList<TestDataProvider.Person>();
 
