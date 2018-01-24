@@ -7,6 +7,7 @@ import com.paresh.diff.dto.Diff;
 import com.paresh.diff.dto.DiffResponse;
 import com.paresh.diff.renderer.ExcelRendererConstants;
 import com.paresh.diff.renderer.config.ExcelRenderingPreferences;
+import com.paresh.diff.renderer.config.RenderingDefaults;
 import com.paresh.diff.util.ReflectionUtil;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.poi.ss.usermodel.*;
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -27,6 +29,64 @@ public class ExcelExport {
 
     public static void exportToExcel(String fileName, Object before, Object after, DiffResponse diffResponse, ExcelRenderingPreferences renderingPreferences) {
 
+        if (!CollectionUtils.isEmpty(diffResponse.getDiffs())) {
+            diffResponse.getDiffs().removeIf(diff -> diff.getChangeType().equals(ChangeType.NO_CHANGE));
+
+            try (Workbook workbook = new XSSFWorkbook();) {
+
+                generateReconSummarySheet(before, after, diffResponse, renderingPreferences, workbook);
+                generateSourceDumps(before, after, diffResponse, renderingPreferences, workbook);
+
+                FileOutputStream out = new FileOutputStream(fileName);
+                workbook.write(out);
+                out.close();
+                logger.info("Done saving file {}", fileName);
+            } catch (IOException e) {
+                logger.error("Exception while exporting excel", e);
+            }
+
+        } else {
+            //TODO to check if Excel sheet really required.
+            logger.info("No diffs found.");
+        }
+    }
+
+    private static void generateSourceDumps(Object before, Object after, DiffResponse diffResponse, ExcelRenderingPreferences renderingPreferences, Workbook workbook) {
+        Class collectionElementClass = ReflectionUtil.getCollectionElementClass(before, after);
+        ClassMetadata classMetadata = diffResponse.getClassMetaDataMap().get(collectionElementClass);
+        List<String> headers = RenderingUtil.getHeaders(classMetadata);
+
+        if (before != null) {
+            generateDump((Collection) before, renderingPreferences, workbook, classMetadata, headers, renderingPreferences.getBeforeSheetName());
+        }
+
+        if (after != null) {
+            generateDump((Collection) after, renderingPreferences, workbook, classMetadata, headers, renderingPreferences.getAfterSheetName());
+        }
+    }
+
+    private static void generateDump(Collection collection, ExcelRenderingPreferences renderingPreferences, Workbook workbook, ClassMetadata classMetadata, List<String> headers, String sheetName) {
+        Sheet sheet = createSheet(workbook, sheetName);
+        int rowNumber = 1;
+        generateHeaderRows(workbook, sheet, headers, rowNumber++, renderingPreferences);
+        if (!CollectionUtils.isEmpty(collection)) {
+            for (Object object : collection) {
+                List<Method> methods = classMetadata.getMethods();
+                ChangeType attributeChangeType;
+                Diff relevantDiff;
+                for (int columnIndex = 0; columnIndex < methods.size(); columnIndex++) {
+                    attributeChangeType = ChangeType.NO_CHANGE;
+                    generateCellContent(sheet, rowNumber, columnIndex, RenderingUtil.getAttributeObject(methods.get(columnIndex), object), "", renderingPreferences.getExcelStyles().getUnchangedStyle(workbook));
+                }
+                rowNumber++;
+            }
+            for (int index = 0; index < headers.size(); index++) {
+                sheet.autoSizeColumn(index);
+            }
+        }
+    }
+
+    private static void generateReconSummarySheet(Object before, Object after, DiffResponse diffResponse, ExcelRenderingPreferences renderingPreferences, Workbook workbook) {
         List consolidatedList = RenderingUtil.getConsolidatedCollection(before, after, diffResponse);
 
         if (!CollectionUtils.isEmpty(consolidatedList)) {
@@ -34,58 +94,67 @@ public class ExcelExport {
             Class collectionElementClass = ReflectionUtil.getCollectionElementClass(before, after);
             ClassMetadata classMetadata = diffResponse.getClassMetaDataMap().get(collectionElementClass);
 
-            List<String> headers = RenderingUtil.getHeaders(classMetadata);
+            List<String> headers = new ArrayList<>();
 
-            try (Workbook workbook = new XSSFWorkbook();) {
+            headers.addAll(RenderingUtil.getMetaDataHeaders(renderingPreferences));
+            headers.addAll(RenderingUtil.getHeaders(classMetadata));
 
-                Sheet sheet = createSheet(workbook, renderingPreferences);
+            Sheet sheet = createSheet(workbook, renderingPreferences.getSheetName());
 
-                generateTitleRow(workbook, sheet, RenderingUtil.getTitle(renderingPreferences, collectionElementClass, classMetadata), renderingPreferences, headers.size()-1);
-                generateHeaderRows(workbook, sheet, headers, ++rowNumber, renderingPreferences);
+            generateTitleRow(workbook, sheet, RenderingUtil.getTitle(renderingPreferences, collectionElementClass, classMetadata), renderingPreferences, headers.size() - 1);
+            generateHeaderRows(workbook, sheet, headers, ++rowNumber, renderingPreferences);
 
-                ChangeType changeType;
-                String changeTypeText = null;
+            ChangeType changeType;
+            String changeTypeText = null;
 
-                int outerIndex = 0;
+            int outerIndex = 0;
+            for (Diff diff : diffResponse.getDiffs()) {
+                int columnIndex = 0;
+                changeType = diff.getChangeType();
+                switch (changeType) {
+                    case ADDED:
+                        changeTypeText = RenderingDefaults.getNewDescription(renderingPreferences.getRenderingMode(), renderingPreferences.getSource1());
+                        break;
+                    case UPDATED:
+                        changeTypeText = RenderingDefaults.getUpdatedDescription(renderingPreferences.getRenderingMode());
+                        break;
+                    case DELETED:
+                        changeTypeText = RenderingDefaults.getDeletedDescription(renderingPreferences.getRenderingMode(), renderingPreferences.getSource1());
+                        break;
+                    case NO_CHANGE:
+                        changeTypeText = ExcelRendererConstants.BLANK;
+                        break;
+                    default:
+                        changeTypeText = ExcelRendererConstants.BLANK;
+                        break;
 
-                for (Diff diff : diffResponse.getDiffs()) {
-                    changeType = diff.getChangeType();
-                    switch (changeType) {
-                        case ADDED:
-                            changeTypeText = "New";
-                            break;
-                        case UPDATED:
-                            changeTypeText = "Updated";
-                            break;
-                        case DELETED:
-                            changeTypeText = "Deleted";
-                            break;
-                        case NO_CHANGE:
-                            changeTypeText = ExcelRendererConstants.BLANK;
-                            break;
-                    }
-                    generateCellContent(sheet, ++rowNumber, 0, changeTypeText, ExcelRendererConstants.BLANK, getCellStyle(workbook,changeType, renderingPreferences));
-
-                    List<Method> methods = classMetadata.getMethods();
-                    ChangeType attributeChangeType;
-                    Diff relevantDiff;
-                    for (int innerIndex = 0; innerIndex < methods.size(); innerIndex++) {
-                        relevantDiff = RenderingUtil.getRelevantDiff(diff.getChildDiffs(), methods.get(innerIndex), classMetadata);
-                        if (relevantDiff != null) {
-                            attributeChangeType = relevantDiff.getChangeType();
-                        } else {
-                            attributeChangeType = ChangeType.NO_CHANGE;
-                        }
-                        generateCellContent(sheet, rowNumber, innerIndex + 1, RenderingUtil.getAttributeObject(methods.get(innerIndex), consolidatedList.get(outerIndex)), getComment(diff, methods.get(innerIndex), attributeChangeType, consolidatedList.get(outerIndex), before, after, classMetadata), getCellStyle(workbook, attributeChangeType, renderingPreferences));
-                    }
-                    outerIndex++;
                 }
-                FileOutputStream out = new FileOutputStream(fileName);
-                workbook.write(out);
-                out.close();
-                logger.info("Done saving file {}", fileName);
-            } catch (IOException e) {
-                logger.error("Exception while exporting excel", e);
+                if (renderingPreferences.isChangeTypeHeaderRequired()) {
+                    generateCellContent(sheet, ++rowNumber, columnIndex, changeTypeText, ExcelRendererConstants.BLANK, getCellStyle(workbook, changeType, renderingPreferences));
+                    columnIndex++;
+                }
+
+                if (renderingPreferences.isSummaryOfChangeHeaderRequired()) {
+                    generateCellContent(sheet, rowNumber, columnIndex, RenderingUtil.getSummaryOfChange(diff.getChildDiffs()), ExcelRendererConstants.BLANK, renderingPreferences.getExcelStyles().getUnchangedStyle(workbook));
+                    columnIndex++;
+                }
+
+                List<Method> methods = classMetadata.getMethods();
+                ChangeType attributeChangeType;
+                Diff relevantDiff;
+                for (int innerIndex = 0; innerIndex < methods.size(); innerIndex++) {
+                    relevantDiff = RenderingUtil.getRelevantDiff(diff.getChildDiffs(), methods.get(innerIndex), classMetadata);
+                    if (relevantDiff != null) {
+                        attributeChangeType = relevantDiff.getChangeType();
+                    } else {
+                        attributeChangeType = ChangeType.NO_CHANGE;
+                    }
+                    generateCellContent(sheet, rowNumber, innerIndex + columnIndex, RenderingUtil.getAttributeObject(methods.get(innerIndex), consolidatedList.get(outerIndex)), getComment(diff, methods.get(innerIndex), attributeChangeType, consolidatedList.get(outerIndex), before, after, classMetadata), getCellStyle(workbook, attributeChangeType, renderingPreferences));
+                }
+                outerIndex++;
+            }
+            for (int index = 0; index < headers.size(); index++) {
+                sheet.autoSizeColumn(index);
             }
         }
     }
@@ -102,11 +171,11 @@ public class ExcelExport {
         switch (changeType) {
             case UPDATED:
                 beforeObject = ClassMetadataCache.getInstance().getObjectFromIdentifier(classDiff.getIdentifier(), beforeCollection);
-                response = "Original value: " + ReflectionUtil.getMethodResponse(method, beforeObject);
+                response = "Original : " + ReflectionUtil.getMethodResponse(method, beforeObject);
                 break;
             case DELETED:
                 afterObject = ClassMetadataCache.getInstance().getObjectFromIdentifier(classDiff.getIdentifier(), afterCollection);
-                response = "Original value: " + ReflectionUtil.getMethodResponse(method, afterObject);
+                response = "Original : " + ReflectionUtil.getMethodResponse(method, afterObject);
                 break;
             case NO_CHANGE:
             case ADDED:
@@ -117,8 +186,8 @@ public class ExcelExport {
     }
 
 
-    private static Sheet createSheet(Workbook workbook, ExcelRenderingPreferences renderingPreferences) {
-        return workbook.createSheet(renderingPreferences.getSheetName());
+    private static Sheet createSheet(Workbook workbook, String sheetName) {
+        return workbook.createSheet(sheetName);
     }
 
     private static void generateTitleRow(Workbook workbook, Sheet sheet, String title, ExcelRenderingPreferences renderingPreferences, int headerCount) {
@@ -177,7 +246,7 @@ public class ExcelExport {
 
     private static Comment generateCellComment(XSSFSheet sheet, String text, int column, int row) {
         XSSFDrawing drawing = sheet.createDrawingPatriarch();
-        XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, column, row, column + 1, row + 1);
+        XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, column, row, column + 3, row + 3);
         XSSFComment comment = drawing.createCellComment(anchor);
 
         // set text in the comment
@@ -185,7 +254,7 @@ public class ExcelExport {
 
         //set comment author.
         //you can see it in the status bar when moving mouse over the commented cell
-        comment.setAuthor("Recon Util");
+        comment.setAuthor("object-diff");
 
         return comment;
     }

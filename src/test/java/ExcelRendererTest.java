@@ -8,11 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ExcelRendererTest {
-    protected static Object before;
-    protected static Object after;
-    protected static Object sameAsBefore;
-    protected static Object emptyBefore;
-    protected static Object emptyAfter;
+    private static Object before;
+    private static Object after;
+
 
     @BeforeClass
     public static void setUp() {
@@ -32,6 +30,10 @@ public class ExcelRendererTest {
         beforeEntry3.setAge(30);
         ((List) before).add(beforeEntry3);
 
+        TestDataProvider.Person beforeEntry4 = new TestDataProvider.Person();
+        beforeEntry4.setName("Same");
+        beforeEntry4.setAge(20);
+        ((List) before).add(beforeEntry4);
 
         after = new ArrayList<TestDataProvider.Person>();
         TestDataProvider.Person afterEntry = new TestDataProvider.Person();
@@ -51,16 +53,12 @@ public class ExcelRendererTest {
         afterEntry3.setAge(35);
         ((List) after).add(afterEntry3);
 
-        sameAsBefore = new ArrayList<TestDataProvider.Person>();
 
-        TestDataProvider.Person sameAsBeforeEntry = new TestDataProvider.Person();
-        sameAsBeforeEntry.setName("Tom");
-        sameAsBeforeEntry.setAge(20);
-        ((List) sameAsBefore).add(sameAsBeforeEntry);
+        TestDataProvider.Person afterEntry4 = new TestDataProvider.Person();
+        afterEntry4.setName("Same");
+        afterEntry4.setAge(20);
+        ((List) after).add(afterEntry4);
 
-
-        emptyBefore = new ArrayList<TestDataProvider.Person>();
-        emptyAfter = new ArrayList<TestDataProvider.Person>();
     }
 
     @Test
