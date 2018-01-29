@@ -5,15 +5,17 @@ import org.apache.poi.ss.usermodel.Workbook;
 
 public interface ExcelStyles {
 
-    CellStyle getTitleStyle(Workbook workbook);
+    ExcelStyles withWorkBook(Workbook workbook);
 
-    CellStyle getHeaderStyle(Workbook workbook);
+    CellStyle getTitleStyle();
 
-    CellStyle getUnchangedStyle(Workbook workbook);
+    CellStyle getHeaderStyle();
 
-    CellStyle getNewStyle(Workbook workbook);
+    CellStyle getUnchangedStyle();
 
-    CellStyle getDeletedStyle(Workbook workbook);
+    CellStyle getNewStyle();
 
-    CellStyle getModifiedStyle(Workbook workbook);
+    CellStyle getDeletedStyle();
+
+    CellStyle getModifiedStyle();
 }

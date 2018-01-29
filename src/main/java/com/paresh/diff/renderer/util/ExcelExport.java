@@ -7,6 +7,7 @@ import com.paresh.diff.dto.Diff;
 import com.paresh.diff.dto.DiffResponse;
 import com.paresh.diff.renderer.ExcelRendererConstants;
 import com.paresh.diff.renderer.config.ExcelRenderingPreferences;
+import com.paresh.diff.renderer.config.ExcelStyles;
 import com.paresh.diff.renderer.config.RenderingDefaults;
 import com.paresh.diff.util.ReflectionUtil;
 import org.apache.commons.collections4.CollectionUtils;
@@ -57,18 +58,18 @@ public class ExcelExport {
         List<String> headers = RenderingUtil.getHeaders(classMetadata);
 
         if (before != null) {
-            generateDump((Collection) before, renderingPreferences, workbook, classMetadata, headers, renderingPreferences.getBeforeSheetName());
+            generateDump((Collection) before, renderingPreferences.getExcelStyles(), workbook, classMetadata, headers, renderingPreferences.getBeforeSheetName());
         }
 
         if (after != null) {
-            generateDump((Collection) after, renderingPreferences, workbook, classMetadata, headers, renderingPreferences.getAfterSheetName());
+            generateDump((Collection) after, renderingPreferences.getExcelStyles(), workbook, classMetadata, headers, renderingPreferences.getAfterSheetName());
         }
     }
 
-    private static void generateDump(Collection collection, ExcelRenderingPreferences renderingPreferences, Workbook workbook, ClassMetadata classMetadata, List<String> headers, String sheetName) {
+    private static void generateDump(Collection collection, ExcelStyles excelStyles, Workbook workbook, ClassMetadata classMetadata, List<String> headers, String sheetName) {
         Sheet sheet = createSheet(workbook, sheetName);
         int rowNumber = 1;
-        generateHeaderRows(workbook, sheet, headers, rowNumber++, renderingPreferences);
+        generateHeaderRows(workbook, sheet, headers, rowNumber++, excelStyles);
         if (!CollectionUtils.isEmpty(collection)) {
             for (Object object : collection) {
                 List<Method> methods = classMetadata.getMethods();
@@ -76,7 +77,7 @@ public class ExcelExport {
                 Diff relevantDiff;
                 for (int columnIndex = 0; columnIndex < methods.size(); columnIndex++) {
                     attributeChangeType = ChangeType.NO_CHANGE;
-                    generateCellContent(sheet, rowNumber, columnIndex, RenderingUtil.getAttributeObject(methods.get(columnIndex), object), "", renderingPreferences.getExcelStyles().getUnchangedStyle(workbook));
+                    generateCellContent(sheet, rowNumber, columnIndex, RenderingUtil.getAttributeObject(methods.get(columnIndex), object), "", excelStyles.withWorkBook(workbook).getUnchangedStyle());
                 }
                 rowNumber++;
             }
@@ -101,8 +102,10 @@ public class ExcelExport {
 
             Sheet sheet = createSheet(workbook, renderingPreferences.getSheetName());
 
-            generateTitleRow(workbook, sheet, RenderingUtil.getTitle(renderingPreferences, collectionElementClass, classMetadata), renderingPreferences, headers.size() - 1);
-            generateHeaderRows(workbook, sheet, headers, ++rowNumber, renderingPreferences);
+            ExcelStyles excelStyles = renderingPreferences.getExcelStyles();
+
+            generateTitleRow(workbook, sheet, RenderingUtil.getTitle(renderingPreferences, collectionElementClass, classMetadata), excelStyles, headers.size() - 1);
+            generateHeaderRows(workbook, sheet, headers, ++rowNumber, excelStyles);
 
             ChangeType changeType;
             String changeTypeText = null;
@@ -130,12 +133,12 @@ public class ExcelExport {
 
                 }
                 if (renderingPreferences.isChangeTypeHeaderRequired()) {
-                    generateCellContent(sheet, ++rowNumber, columnIndex, changeTypeText, ExcelRendererConstants.BLANK, getCellStyle(workbook, changeType, renderingPreferences));
+                    generateCellContent(sheet, ++rowNumber, columnIndex, changeTypeText, ExcelRendererConstants.BLANK, getCellStyle(workbook, changeType, renderingPreferences.getExcelStyles()));
                     columnIndex++;
                 }
 
                 if (renderingPreferences.isSummaryOfChangeHeaderRequired()) {
-                    generateCellContent(sheet, rowNumber, columnIndex, RenderingUtil.getSummaryOfChange(diff.getChildDiffs()), ExcelRendererConstants.BLANK, renderingPreferences.getExcelStyles().getUnchangedStyle(workbook));
+                    generateCellContent(sheet, rowNumber, columnIndex, RenderingUtil.getSummaryOfChange(diff.getChildDiffs()), ExcelRendererConstants.BLANK, renderingPreferences.getExcelStyles().withWorkBook(workbook).getUnchangedStyle());
                     columnIndex++;
                 }
 
@@ -149,7 +152,7 @@ public class ExcelExport {
                     } else {
                         attributeChangeType = ChangeType.NO_CHANGE;
                     }
-                    generateCellContent(sheet, rowNumber, innerIndex + columnIndex, RenderingUtil.getAttributeObject(methods.get(innerIndex), consolidatedList.get(outerIndex)), getComment(diff, methods.get(innerIndex), attributeChangeType, consolidatedList.get(outerIndex), before, after, classMetadata), getCellStyle(workbook, attributeChangeType, renderingPreferences));
+                    generateCellContent(sheet, rowNumber, innerIndex + columnIndex, RenderingUtil.getAttributeObject(methods.get(innerIndex), consolidatedList.get(outerIndex)), getComment(diff, methods.get(innerIndex), attributeChangeType, consolidatedList.get(outerIndex), before, after, classMetadata), getCellStyle(workbook, attributeChangeType, excelStyles));
                 }
                 outerIndex++;
             }
@@ -190,40 +193,38 @@ public class ExcelExport {
         return workbook.createSheet(sheetName);
     }
 
-    private static void generateTitleRow(Workbook workbook, Sheet sheet, String title, ExcelRenderingPreferences renderingPreferences, int headerCount) {
+    private static void generateTitleRow(Workbook workbook, Sheet sheet, String title, ExcelStyles excelStyles, int headerCount) {
         Row titleRow = sheet.createRow(0);
         titleRow.setHeightInPoints(45);
         Cell titleCell = titleRow.createCell(0);
         titleCell.setCellValue(title);
-        titleCell.setCellStyle(renderingPreferences.getExcelStyles().getTitleStyle(workbook));
+        titleCell.setCellStyle(excelStyles.withWorkBook(workbook).getTitleStyle());
         sheet.addMergedRegion(new CellRangeAddress(0, 0, 0, headerCount));
     }
 
-    private static void generateHeaderRows(Workbook workbook, Sheet sheet, List<String> headers, int row, ExcelRenderingPreferences
-            renderingPreferences) {
+    private static void generateHeaderRows(Workbook workbook, Sheet sheet, List<String> headers, int row, ExcelStyles excelStyles) {
         Row headerRow = sheet.createRow(row);
         headerRow.setHeightInPoints(40);
         Cell headerCell;
         for (int index = 0; index < headers.size(); index++) {
             headerCell = headerRow.createCell(index);
             headerCell.setCellValue(headers.get(index));
-            headerCell.setCellStyle(renderingPreferences.getExcelStyles().getHeaderStyle(workbook));
+            headerCell.setCellStyle(excelStyles.withWorkBook(workbook).getHeaderStyle());
         }
     }
 
-    private static CellStyle getCellStyle(Workbook workbook, ChangeType changeType, ExcelRenderingPreferences
-            renderingPreferences) {
+    private static CellStyle getCellStyle(Workbook workbook, ChangeType changeType, ExcelStyles excelStyles) {
         switch (changeType) {
             case ADDED:
-                return renderingPreferences.getExcelStyles().getNewStyle(workbook);
+                return excelStyles.withWorkBook(workbook).getNewStyle();
             case UPDATED:
-                return renderingPreferences.getExcelStyles().getModifiedStyle(workbook);
+                return excelStyles.withWorkBook(workbook).getModifiedStyle();
             case DELETED:
-                return renderingPreferences.getExcelStyles().getDeletedStyle(workbook);
+                return excelStyles.withWorkBook(workbook).getDeletedStyle();
             case NO_CHANGE:
-                return renderingPreferences.getExcelStyles().getUnchangedStyle(workbook);
+                return excelStyles.withWorkBook(workbook).getUnchangedStyle();
             default:
-                return renderingPreferences.getExcelStyles().getUnchangedStyle(workbook);
+                return excelStyles.withWorkBook(workbook).getUnchangedStyle();
         }
     }
 

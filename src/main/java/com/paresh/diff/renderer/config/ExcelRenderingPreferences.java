@@ -9,6 +9,7 @@ import java.util.Map;
 
 public class ExcelRenderingPreferences implements RenderingPreferences {
     private Map<String, Object> preference = new HashMap<>();
+    private ExcelStyles defaultExcelStyles =  new DefaultExcelStyles();
 
     public void setExcelStyles(ExcelStyles excelStyles) {
         preference.put(ExcelRendererConstants.STYLES, excelStyles);
@@ -16,7 +17,7 @@ public class ExcelRenderingPreferences implements RenderingPreferences {
 
     public ExcelStyles getExcelStyles() {
         ExcelStyles returnExcelStyle = (ExcelStyles) preference.get(ExcelRendererConstants.STYLES);
-        return returnExcelStyle == null ? new DefaultExcelStyles() : returnExcelStyle;
+        return returnExcelStyle == null ? defaultExcelStyles : returnExcelStyle;
     }
 
     public String getSheetName() {
