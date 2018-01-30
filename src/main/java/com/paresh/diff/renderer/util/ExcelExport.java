@@ -116,13 +116,13 @@ public class ExcelExport {
                 changeType = diff.getChangeType();
                 switch (changeType) {
                     case ADDED:
-                        changeTypeText = RenderingDefaults.getNewDescription(renderingPreferences.getRenderingMode(), renderingPreferences.getSource1());
+                        changeTypeText = RenderingDefaults.getNewDescription(renderingPreferences.getRenderingMode(), renderingPreferences.getSource2());
                         break;
                     case UPDATED:
                         changeTypeText = RenderingDefaults.getUpdatedDescription(renderingPreferences.getRenderingMode());
                         break;
                     case DELETED:
-                        changeTypeText = RenderingDefaults.getDeletedDescription(renderingPreferences.getRenderingMode(), renderingPreferences.getSource1());
+                        changeTypeText = RenderingDefaults.getDeletedDescription(renderingPreferences.getRenderingMode(), renderingPreferences.getSource2());
                         break;
                     case NO_CHANGE:
                         changeTypeText = ExcelRendererConstants.BLANK;
