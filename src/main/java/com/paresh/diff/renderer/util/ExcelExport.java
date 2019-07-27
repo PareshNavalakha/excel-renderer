@@ -20,9 +20,7 @@ import org.slf4j.LoggerFactory;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 public class ExcelExport {
 
@@ -171,13 +169,24 @@ public class ExcelExport {
         Object afterObject = null;
         Object beforeObject = null;
 
+
+        Map<Object, Object> beforeIdentifierMap = new HashMap<>(beforeCollection.size());
+
+        Map<Object, Object> afterIdentifierMap = new HashMap<>(afterCollection.size());
+
+        beforeCollection.stream().forEach(element ->
+                beforeIdentifierMap.put(ClassMetadataCache.getInstance().getIdentifier(element), element));
+
+        afterCollection.stream().forEach(element ->
+                afterIdentifierMap.put(ClassMetadataCache.getInstance().getIdentifier(element), element));
+
         switch (changeType) {
             case UPDATED:
-                beforeObject = ClassMetadataCache.getInstance().getObjectFromIdentifier(classDiff.getIdentifier(), beforeCollection);
+                beforeObject = ClassMetadataCache.getInstance().getCorrespondingObjectMatchingIdentifier(classDiff.getIdentifier(), beforeIdentifierMap);
                 response = "Original : " + ReflectionUtil.getMethodResponse(method, beforeObject);
                 break;
             case DELETED:
-                afterObject = ClassMetadataCache.getInstance().getObjectFromIdentifier(classDiff.getIdentifier(), afterCollection);
+                afterObject = ClassMetadataCache.getInstance().getCorrespondingObjectMatchingIdentifier(classDiff.getIdentifier(), afterIdentifierMap);
                 response = "Original : " + ReflectionUtil.getMethodResponse(method, afterObject);
                 break;
             case NO_CHANGE:

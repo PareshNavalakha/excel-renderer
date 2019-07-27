@@ -11,9 +11,7 @@ import com.paresh.diff.util.ReflectionUtil;
 import org.apache.commons.collections4.CollectionUtils;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 public class RenderingUtil {
 
@@ -36,15 +34,25 @@ public class RenderingUtil {
         Collection beforeCollection = (Collection) before;
         Collection afterCollection = (Collection) after;
 
+        Map<Object, Object> beforeIdentifierMap = new HashMap<>(beforeCollection.size());
+
+        Map<Object, Object> afterIdentifierMap = new HashMap<>(afterCollection.size());
+
+        beforeCollection.stream().forEach(element ->
+                beforeIdentifierMap.put(ClassMetadataCache.getInstance().getIdentifier(element), element));
+
+        afterCollection.stream().forEach(element ->
+                afterIdentifierMap.put(ClassMetadataCache.getInstance().getIdentifier(element), element));
+
         for (Diff diff : diffResponse.getDiffs()) {
             switch (diff.getChangeType()) {
                 case ADDED:
                 case UPDATED:
-                    consolidatedCollection.add(ClassMetadataCache.getInstance().getObjectFromIdentifier(diff.getIdentifier(), afterCollection));
+                    consolidatedCollection.add(ClassMetadataCache.getInstance().getCorrespondingObjectMatchingIdentifier(diff.getIdentifier(), afterIdentifierMap));
                     break;
                 case NO_CHANGE:
                 case DELETED:
-                    consolidatedCollection.add(ClassMetadataCache.getInstance().getObjectFromIdentifier(diff.getIdentifier(), beforeCollection));
+                    consolidatedCollection.add(ClassMetadataCache.getInstance().getCorrespondingObjectMatchingIdentifier(diff.getIdentifier(), beforeIdentifierMap));
                     break;
                 default:
                     break;

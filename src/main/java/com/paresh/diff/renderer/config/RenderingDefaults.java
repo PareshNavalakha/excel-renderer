@@ -1,6 +1,5 @@
 package com.paresh.diff.renderer.config;
 
-import com.paresh.diff.renderer.RenderingPreferences;
 import com.paresh.diff.renderer.data.RenderingMode;
 
 public class RenderingDefaults {

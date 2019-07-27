@@ -1,6 +1,5 @@
+import com.paresh.diff.calculators.DiffComputeEngine;
 import com.paresh.diff.dto.DiffResponse;
-import com.paresh.diff.renderer.ExcelRenderer;
-import com.paresh.diff.util.DiffComputeEngine;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
