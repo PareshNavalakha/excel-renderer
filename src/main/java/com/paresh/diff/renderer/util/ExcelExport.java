@@ -13,7 +13,10 @@ import com.paresh.diff.util.ReflectionUtil;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
-import org.apache.poi.xssf.usermodel.*;
+import org.apache.poi.xssf.streaming.SXSSFDrawing;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFRichTextString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,10 +34,13 @@ public class ExcelExport {
         if (!CollectionUtils.isEmpty(diffResponse.getDiffs())) {
             diffResponse.getDiffs().removeIf(diff -> diff.getChangeType().equals(ChangeType.NO_CHANGE));
 
-            try (Workbook workbook = new XSSFWorkbook();) {
+            try (Workbook workbook = new SXSSFWorkbook();) {
 
                 generateReconSummarySheet(before, after, diffResponse, renderingPreferences, workbook);
-                generateSourceDumps(before, after, diffResponse, renderingPreferences, workbook);
+
+                if (renderingPreferences.isSourceDumpRequired()) {
+                    generateSourceDumps(before, after, diffResponse, renderingPreferences, workbook);
+                }
 
                 FileOutputStream out = new FileOutputStream(fileName);
                 workbook.write(out);
@@ -79,14 +85,24 @@ public class ExcelExport {
                 }
                 rowNumber++;
             }
-            for (int index = 0; index < headers.size(); index++) {
-                sheet.autoSizeColumn(index);
-            }
         }
     }
 
     private static void generateReconSummarySheet(Object before, Object after, DiffResponse diffResponse, ExcelRenderingPreferences renderingPreferences, Workbook workbook) {
-        List consolidatedList = RenderingUtil.getConsolidatedCollection(before, after, diffResponse);
+
+        Collection beforeCollection = (Collection) before;
+        Collection afterCollection = (Collection) after;
+
+        Map<Object, Object> beforeIdentifierMap = new HashMap<>(beforeCollection.size());
+        Map<Object, Object> afterIdentifierMap = new HashMap<>(afterCollection.size());
+
+        beforeCollection.stream().forEach(element ->
+                beforeIdentifierMap.put(ClassMetadataCache.getInstance().getIdentifier(element), element));
+
+        afterCollection.stream().forEach(element ->
+                afterIdentifierMap.put(ClassMetadataCache.getInstance().getIdentifier(element), element));
+
+        List consolidatedList = RenderingUtil.getConsolidatedCollection(before, beforeIdentifierMap, after, afterIdentifierMap, diffResponse);
 
         if (!CollectionUtils.isEmpty(consolidatedList)) {
             int rowNumber = 0;
@@ -150,44 +166,41 @@ public class ExcelExport {
                     } else {
                         attributeChangeType = ChangeType.NO_CHANGE;
                     }
-                    generateCellContent(sheet, rowNumber, innerIndex + columnIndex, RenderingUtil.getAttributeObject(methods.get(innerIndex), consolidatedList.get(outerIndex)), getComment(diff, methods.get(innerIndex), attributeChangeType, consolidatedList.get(outerIndex), before, after, classMetadata), getCellStyle(workbook, attributeChangeType, excelStyles));
+                    generateCellContent(sheet, rowNumber, innerIndex + columnIndex, RenderingUtil.getAttributeObject(methods.get(innerIndex), consolidatedList.get(outerIndex)),
+                            getComment(diff,
+                                    methods.get(innerIndex),
+                                    attributeChangeType,
+                                    beforeIdentifierMap,
+                                    afterIdentifierMap,
+                                    renderingPreferences), getCellStyle(workbook, attributeChangeType, excelStyles));
                 }
                 outerIndex++;
-            }
-            for (int index = 0; index < headers.size(); index++) {
-                sheet.autoSizeColumn(index);
             }
         }
     }
 
-    private static String getComment(Diff classDiff, Method method, ChangeType changeType, Object object, Object before, Object after, ClassMetadata classMetadata) {
+    private static String getComment(Diff classDiff, Method method, ChangeType changeType, Map<Object, Object> beforeIdentifierMap, Map<Object, Object> afterIdentifierMap, ExcelRenderingPreferences renderingPreferences) {
         String response = null;
-
-        Collection beforeCollection = (Collection) before;
-        Collection afterCollection = (Collection) after;
-
         Object afterObject = null;
         Object beforeObject = null;
-
-
-        Map<Object, Object> beforeIdentifierMap = new HashMap<>(beforeCollection.size());
-
-        Map<Object, Object> afterIdentifierMap = new HashMap<>(afterCollection.size());
-
-        beforeCollection.stream().forEach(element ->
-                beforeIdentifierMap.put(ClassMetadataCache.getInstance().getIdentifier(element), element));
-
-        afterCollection.stream().forEach(element ->
-                afterIdentifierMap.put(ClassMetadataCache.getInstance().getIdentifier(element), element));
 
         switch (changeType) {
             case UPDATED:
                 beforeObject = ClassMetadataCache.getInstance().getCorrespondingObjectMatchingIdentifier(classDiff.getIdentifier(), beforeIdentifierMap);
-                response = "Original : " + ReflectionUtil.getMethodResponse(method, beforeObject);
+                if (renderingPreferences.getSource1() != null) {
+                    response = renderingPreferences.getSource1() + " : " + ReflectionUtil.getMethodResponse(method, beforeObject);
+                } else {
+                    response = "Original : " + ReflectionUtil.getMethodResponse(method, beforeObject);
+
+                }
                 break;
             case DELETED:
                 afterObject = ClassMetadataCache.getInstance().getCorrespondingObjectMatchingIdentifier(classDiff.getIdentifier(), afterIdentifierMap);
-                response = "Original : " + ReflectionUtil.getMethodResponse(method, afterObject);
+                if (renderingPreferences.getSource2() != null) {
+                    response = renderingPreferences.getSource2() + " : " + ReflectionUtil.getMethodResponse(method, afterObject);
+                } else {
+                    response = "Original : " + ReflectionUtil.getMethodResponse(method, afterObject);
+                }
                 break;
             case NO_CHANGE:
             case ADDED:
@@ -249,15 +262,15 @@ public class ExcelExport {
 
         }
         if (comment != null && !comment.isEmpty()) {
-            cell.setCellComment(generateCellComment((XSSFSheet) sheet, comment, column, row));
+            cell.setCellComment(generateCellComment((SXSSFSheet) sheet, comment, column, row));
         }
         cell.setCellStyle(cellStyle);
     }
 
-    private static Comment generateCellComment(XSSFSheet sheet, String text, int column, int row) {
-        XSSFDrawing drawing = sheet.createDrawingPatriarch();
-        XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, column, row, column + 3, row + 3);
-        XSSFComment comment = drawing.createCellComment(anchor);
+    private static Comment generateCellComment(SXSSFSheet sheet, String text, int column, int row) {
+        SXSSFDrawing drawing = sheet.createDrawingPatriarch();
+        ClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, column, row, column + 3, row + 3);
+        Comment comment = drawing.createCellComment(anchor);
 
         // set text in the comment
         comment.setString(new XSSFRichTextString(text));

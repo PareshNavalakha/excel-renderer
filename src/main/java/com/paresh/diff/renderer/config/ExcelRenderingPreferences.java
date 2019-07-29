@@ -9,7 +9,7 @@ import java.util.Map;
 
 public class ExcelRenderingPreferences implements RenderingPreferences {
     private Map<String, Object> preference = new HashMap<>();
-    private ExcelStyles defaultExcelStyles =  new DefaultExcelStyles();
+    private ExcelStyles defaultExcelStyles = new DefaultExcelStyles();
 
     public void setExcelStyles(ExcelStyles excelStyles) {
         preference.put(ExcelRendererConstants.STYLES, excelStyles);
@@ -79,25 +79,35 @@ public class ExcelRenderingPreferences implements RenderingPreferences {
         return changeTypeRequired == null ? true : changeTypeRequired;
     }
 
+
+    public boolean isSourceDumpRequired() {
+        Boolean sourceDumpRequired = (Boolean) preference.get(ExcelRendererConstants.SOURCE_DUMPS_REQUIRED);
+        return sourceDumpRequired == null ? true : sourceDumpRequired;
+    }
+
+    public void sourceDumpRequired(boolean sourceDumpRequired) {
+        preference.put(ExcelRendererConstants.SOURCE_DUMPS_REQUIRED, sourceDumpRequired);
+    }
+
     public void changeTypeHeaderRequired(boolean changeTypeRequired) {
         preference.put(ExcelRendererConstants.CHANGE_TYPE_REQUIRED, changeTypeRequired);
     }
 
     public boolean isSummaryOfChangeHeaderRequired() {
-        Boolean summaryOfChangeHeaderRequired = (Boolean) preference.get(ExcelRendererConstants.SUMMARY_OF_CHANGE_REQUIRED);
+        Boolean summaryOfChangeHeaderRequired = (Boolean) preference.get(ExcelRendererConstants.SOURCE_DUMPS_REQUIRED);
         return summaryOfChangeHeaderRequired == null ? true : summaryOfChangeHeaderRequired;
     }
 
     public void summaryOfChangeHeaderRequired(boolean summaryOfChangeHeaderRequired) {
-        preference.put(ExcelRendererConstants.SUMMARY_OF_CHANGE_REQUIRED, summaryOfChangeHeaderRequired);
+        preference.put(ExcelRendererConstants.SOURCE_DUMPS_REQUIRED, summaryOfChangeHeaderRequired);
     }
 
 
     public String getBeforeSheetName() {
-        return RenderingDefaults.getBeforeSheetName(getRenderingMode(),getSource1());
+        return RenderingDefaults.getBeforeSheetName(getRenderingMode(), getSource1());
     }
 
     public String getAfterSheetName() {
-        return RenderingDefaults.getAfterSheetName(getRenderingMode(),getSource2());
+        return RenderingDefaults.getAfterSheetName(getRenderingMode(), getSource2());
     }
 }

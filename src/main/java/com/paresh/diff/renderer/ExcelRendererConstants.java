@@ -21,4 +21,7 @@ public class ExcelRendererConstants {
 
     public static final String CHANGE_TYPE_REQUIRED = "changeTypeRequired";
     public static final String SUMMARY_OF_CHANGE_REQUIRED = "summaryOfChangeRequired";
+    public static final String SOURCE_DUMPS_REQUIRED = "sourceDumpsRequired";
+
+
 }

@@ -29,20 +29,8 @@ public class RenderingUtil {
         return ReflectionUtil.getMethodResponse(method, o);
     }
 
-    public static List getConsolidatedCollection(Object before, Object after, DiffResponse diffResponse) {
+    public static List getConsolidatedCollection(Object before, Map<Object, Object> beforeIdentifierMap,Object after,Map<Object, Object> afterIdentifierMap, DiffResponse diffResponse) {
         List consolidatedCollection = new ArrayList(diffResponse.getDiffs().size());
-        Collection beforeCollection = (Collection) before;
-        Collection afterCollection = (Collection) after;
-
-        Map<Object, Object> beforeIdentifierMap = new HashMap<>(beforeCollection.size());
-
-        Map<Object, Object> afterIdentifierMap = new HashMap<>(afterCollection.size());
-
-        beforeCollection.stream().forEach(element ->
-                beforeIdentifierMap.put(ClassMetadataCache.getInstance().getIdentifier(element), element));
-
-        afterCollection.stream().forEach(element ->
-                afterIdentifierMap.put(ClassMetadataCache.getInstance().getIdentifier(element), element));
 
         for (Diff diff : diffResponse.getDiffs()) {
             switch (diff.getChangeType()) {
